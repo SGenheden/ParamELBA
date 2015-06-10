@@ -1,0 +1,84 @@
+<elba units="lammps">
+  <mol resname="POPC" mappingff="charmm">
+    <beads n="14">
+      <bead name="n" type="2">
+        <mapping>n</mapping>
+      </bead>  
+      <bead name="p" type="3">
+        <mapping>p</mapping>
+      </bead>
+      <bead name="g" type="4">
+        <mapping>o11 c1 c2 c3 o21 o31</mapping>
+      </bead>
+      <bead name="e1" type="5">
+        <mapping>c21 o22 c22 c23</mapping>
+      </bead>
+      <bead name="t1a" type="6">
+        <mapping>c24 c25 c26</mapping>
+      </bead>
+      <bead name="t2a" type="6">
+        <mapping>c27 c28 c29</mapping>
+      </bead>
+      <bead name="t3a" type="6">
+        <mapping>c210 c211 c212</mapping>
+      </bead>
+      <bead name="t4a" type="6">
+        <mapping>c213 c214 c215</mapping>
+      </bead> 
+      <bead name="t5a" type="6">
+        <mapping>c216 c217 c218</mapping>
+      </bead> 
+      <bead name="e2" type="5">
+        <mapping>c31 o32 c32 c33</mapping>
+      </bead>
+      <bead name="t1b" type="6">
+        <mapping>c34 c35 c36</mapping>
+      </bead> 
+      <bead name="t2b" type="6">
+        <mapping>c37 c38 c39</mapping>
+      </bead> 
+      <bead name="t3b" type="6">
+        <mapping>c310 c311 c312</mapping>
+      </bead>
+      <bead name="t4b" type="6">
+        <mapping>c313 c314 c315</mapping>
+      </bead>
+    </beads>
+    <connectivity bonds="13" angles="12" dipolerests="3">
+      <bond type="1">n p</bond>
+      <bond type="2">p g</bond>
+      <bond type="3">g e1</bond>
+      <bond type="3">g e2</bond>
+      <bond type="4">e1 t1a</bond>
+      <bond type="4">e2 t1b</bond>
+      <bond type="5">t1a t2a</bond>
+      <bond type="5">t2a t3a</bond>
+      <bond type="5">t3a t4a</bond>
+      <bond type="5">t4a t5a</bond>
+      <bond type="5">t1b t2b</bond>
+      <bond type="5">t2b t3b</bond>
+      <bond type="5">t3b t4b</bond>
+      <angle type="1">n p g</angle>
+      <angle type="2">p g e1</angle>
+      <angle type="2">p g e2</angle>
+      <angle type="3">g e1 t1a</angle>
+      <angle type="3">e1 t1a t2a</angle>
+      <angle type="4">t1a t2a t3a</angle>
+      <angle type="3">t2a t3a t4a</angle>
+      <angle type="3">t3a t4a t5a</angle>
+      <angle type="3">g e2 t1b</angle>
+      <angle type="3">e2 t1b t2b</angle>
+      <angle type="3">t1b t2b t3b</angle>
+      <angle type="3">t2b t3b t4b</angle>
+      <dipolerest type="5">g p</dipolerest>
+      <dipolerest type="5">e1 t1a</dipolerest>
+      <dipolerest type="5">e2 t1b</dipolerest>
+    </connectivity>
+  </mol>
+  <beadtype id="2" charge="0.7" radius="5.4" density="1.1"/>
+  <beadtype id="3" charge="-0.7" radius="5.2" density="1.2"/>
+  <beadtype id="4" dipole="0.333" radius="4.6" density="1.2"/>
+  <beadtype id="5" dipole="0.416" radius="4.6" density="1.2"/>
+  <beadtype id="6" radius="4.5" density="0.9"/>
+</elba>
+
