@@ -59,7 +59,8 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--ref', help="a CG reference file", default="ref.pdb")
     parser.add_argument('-s', '--struct', help="a AA structure file")
     parser.add_argument('-x', '--xml', help="an XML file with force field definitions")
-    parser.add_argument('-o', '--out', help="the output", default="bondang2.txt")
+    parser.add_argument('-o', '--out', help="the output", default="bondang.txt")
+    parser.add_argument('-n', '--naming', nargs=2, help="naming convention change")
     parser.add_argument('--skip', type=int, help="skip this many snapshots", default=0)
     parser.add_argument('--dt', type=float, help="the number of ps for each snapshot", default=10)
     args = parser.parse_args()
@@ -75,6 +76,15 @@ if __name__ == '__main__':
         universe = md.Universe(args.struct, args.file)
     # Load the reference CG universe
     refuni = md.Universe(args.ref)
+
+    # Check if we need to translate the atom names
+    namtrans = None
+    if args.naming is not None:
+        namref = [line.strip() for line in open(args.naming[0],'r').readlines()]
+        nammob = [line.strip() for line in open(args.naming[1],'r').readlines()]
+        namtrans = {}
+        for nr,nm in zip(namref,nammob):
+            if nm != "*" : namtrans[nm] = nr
 
     # Pre-processing
     resids = []
@@ -95,7 +105,10 @@ if __name__ == '__main__':
 
         # Setup transformation matrices if necessary
         if args.struct is not None:
-            atomnames = [a.name.lower() for a in mdresidues[-1]]
+            if namtrans is None:
+                atomnames = [a.name.lower() for a in mdresidues[-1]]
+            else:
+                atomnames = [namtrans[a.name].lower() for a in mdresidues[-1]]
             trans_mats[resid] = ffmol.transmat(atomnames)
 
     # This assumes that we only have one lipid type, which is fine for now
