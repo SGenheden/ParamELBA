@@ -34,8 +34,8 @@ def _fit_dists(distlist,labels,fflist) :
     Fit the distributions and compute 
     """
     
-    def _harmonic(xdata, k, eq):
-        return k*(xdata-eq)*(xdata-eq)
+    def _harmonic(xdata, k, eq,C):
+        return k*(xdata-eq)*(xdata-eq)+C
     
     nseries = distlist[0].shape[1]
     RT      = 303.0*8.314/4.184/1000.0
@@ -60,7 +60,7 @@ def _fit_dists(distlist,labels,fflist) :
             kde.covariance_factor = lambda : 0.25
             kde._compute_covariance()
             reffunc = -RT*np.log(kde(e))
-            p0 = [RT/y.var(),y.mean()]
+            p0 = [RT/y.var(),y.mean(),y.std()*np.sqrt(np.pi*2.0)]
             popt,pcov = opt.curve_fit(_harmonic,e,reffunc,p0)
             if isbond:
                 print " %s: k=%.3f r_eq=%.3f"%(label,popt[0],popt[1]),
@@ -92,13 +92,11 @@ def _plot_dists(distlist,labels,fflist,figure,trans=None):
             density = stats.gaussian_kde(y)
             density.covariance_factor = lambda : 0.25
             density._compute_covariance()
-            print y.std(),
             a.plot(e,density(e),color=colors.color(i),label=label)
             stdval = max(stdval,np.round(2.0*y.std(),0),0.5)
             minval = min(minval,np.round(np.floor(e.min()),0))
             maxval = max(maxval,np.round(np.ceil(e.max()),0))
         mean,std = fflist[iseries].type.statmoments(RT)
-        print mean,std
         minval = min(minval,np.floor(mean-2.0*std))
         maxval = max(maxval,np.ceil(mean+2.0*std))
         stdval = max(stdval,np.round(2.0*std,0),0.5)
@@ -164,14 +162,12 @@ if __name__ == '__main__':
     f = plt.figure(1)
     _plot_dists(bondlist,args.labels,ffmol.bonds,f)
     f.savefig(args.out+"_bonddist.png",format="png")
-    print ""    
 
     f = plt.figure(2)
     def _trans_ang(y):
         return np.cos(np.deg2rad(y))
     _plot_dists(anglist,args.labels,ffmol.angles,f,trans=_trans_ang)
-    f.savefig(args.out+"_angdist.png",format="png")  
-    print ""    
+    f.savefig(args.out+"_angdist.png",format="png")    
 
     # Estimate ff parameters
     _fit_dists(bondlist,args.labels,ffmol.bonds)  
