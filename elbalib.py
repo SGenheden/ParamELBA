@@ -9,7 +9,81 @@ These definitions are typically read from an XML file.
 import xml.etree.ElementTree as ET
 
 import numpy as np
+import scipy.stats as stats
 
+class FfType(object):
+    """
+    Class to store the definition of an force field type
+
+    Attributes
+    ----------
+    id : integer
+      the identifier of the type
+    props : dictionary of floats
+      the properties of this type
+    """
+
+    def __init__(self):
+        self.id = -1  # Unassigned
+        self.props = {}
+
+    def __str__(self):
+        return "Type %d %s" % (self.id, " ".join("%s=%.3f"%(prop,val) for prop,val in self.props.iteritems()))
+
+    def set(self, **kwargs):
+        """
+        Sets the property of this type from a dictionary, typically an XML node
+        """
+        if "id" in kwargs:
+            self.id = int(kwargs["id"])
+        else:
+            return
+        for prop in kwargs:
+            if prop == "id" : continue # Already took care of id above
+            self.props[prop] = float(kwargs[prop])
+            setattr(self, prop, float(kwargs[prop]))
+
+    def potential(self, coord):
+        return 0.0
+    
+    def distribution(self,coord,RT):
+        return 0.0
+
+    def statmoments(self,RT):
+        return 0.0,0.0
+
+class BondType(FfType):
+    """
+    Class to store the definition of a bond type
+    """
+    def potential(self, coord):
+        return self.k*self.kf*(coord - self.r0)*(coord - self.r0)
+
+    def distribution(self,coord,RT):
+        mean, std = self.statmoments(RT)
+        return stats.norm.pdf(coord,loc=mean,scale=std)
+    
+    def statmoments(self,RT):
+        return self.r0,np.sqrt(RT/(2.0*self.k*self.kf))
+
+
+class AngleType(FfType):
+    """
+    Class to store the definition of an angle type
+    """
+    def potential(self, coord):
+        costheta0 = np.cos(np.deg2rad(self.theta0))
+        coscoord = np.cos(np.deg2rad(coord))
+        return self.k*self.kf*(coscoord - costheta0)*(coscoord - costheta0)
+    
+    def distribution(self,coord,RT):
+        coscoord = np.cos(np.deg2rad(coord))
+        mean, std = self.statmoments(RT)
+        return stats.norm.pdf(coscoord,loc=mean,scale=std)
+
+    def statmoments(self,RT):
+        costheta0 = np.cos(np.deg2rad(self.theta0))        
+        return costheta0, np.sqrt(RT/(2.0*self.k*self.kf))
 
 class ElbaBead(object):
     """
@@ -32,7 +106,7 @@ class ElbaBead(object):
 
     def __str__(self):
         if self.name is not None:
-            if isinstance(self.beadtype, BeadType):
+            if isinstance(self.beadtype, FfType):
                 return "Bead %s type=(%s) mapping=(%s)" % (self.name, self.beadtype.__str__(), " ".join(self.mapping))
             else:
                 return "Bead %s type=%d mapping=(%s)" % (self.name, self.beadtype, " ".join(self.mapping))
@@ -64,54 +138,13 @@ class ElbaBead(object):
             self.mapping.extend(m.text.strip().split())
 
 
-class BeadType(object):
-    """
-    Class to store the definition of an ELBA bead type
-
-    Attributes
-    ----------
-    id : integer
-      the identifier of the type
-    charge : float
-      the charge of the bead
-    dipole : float
-      the magnitude of the dipole vector
-    density : float
-      the density of the bead
-    radius : float
-      the radius of the bead
-    """
-
-    def __init__(self):
-        self.id = -1  # Unassigned
-        self.charge = 0.0
-        self.dipole = 0.0
-        self.density = 0.0
-        self.radius = 0.0
-
-    def __str__(self):
-        return "Type %d charge=%.2f dipole=%.2f density=%.2f radius=%.2f" % (self.id, self.charge, self.dipole, self.density, self.radius)
-
-    def set(self, **kwargs):
-        """
-        Sets the property of this bead type from a dictionary, typically an XML node
-        """
-        if "id" in kwargs:
-            self.id = int(kwargs["id"])
-        else:
-            return
-        for prop in ["charge", "dipole", "density", "radius"]:
-            if prop in kwargs:
-                setattr(self, prop, float(kwargs[prop]))
-
-
 class Connectivity(object):
     """
     Class to store molecular connectivity
 
     Attributes
     ----------
-    contype : integer
+    contype : FfType
       the connectivity force field type
     beads : list of ElbaBead
       the beads in the connectivity
@@ -122,9 +155,10 @@ class Connectivity(object):
         self.beads = []
 
     def __str__(self):
-        return "-".join(b.name if isinstance(b, ElbaBead) else b for b in self.beads)
+        typestr = "%d"%self.type if isinstance(self.type,int) else "("+self.type.__str__()+")"
+        return "Connectivity type=%s, %s"%(typestr,"-".join(b.name if isinstance(b, ElbaBead) else b for b in self.beads))
 
-    def parse(self, element, molecule, parent):
+    def parse(self, element, molecule, typelist):
         """
         Parse connectivity from an XML tree
 
@@ -134,11 +168,13 @@ class Connectivity(object):
           the node to parse on the XML tree
         molecule : ElbaMolecule 
           the molecule that has this connectivity
-        parent : Elba
-          the owner of this molecule
+        typelist : dictionary of FfType
+          the list of types for this connectivity
         """
         if "type" in element.attrib:
             self.type = int(element.attrib["type"])
+            if self.type in typelist :
+                self.type = typelist[self.type]
             for atom in element.text.strip().split():
                 if atom in molecule.beadnames:
                     self.beads.append(molecule.beads[atom])
@@ -217,11 +253,12 @@ class ElbaMolecule(object):
 
         # Then find the connectivity
         tag2list = {"bond": self.bonds, "angle": self.angles, "dipolerest": self.dipolerestraints}
+        parentlist = {"bond": parent.bondtypes, "angle": parent.angletypes, "dipolerest": parent.dipoletypes}
         for conroot in element.findall("./connectivity"):
             for child in conroot:
                 if child.tag in tag2list:
                     tag2list[child.tag].append(Connectivity())
-                    tag2list[child.tag][-1].parse(child, self, parent)
+                    tag2list[child.tag][-1].parse(child, self, parentlist[child.tag])
 
     def transmat(self, atomnames, usechache=True):
         if usechache and self._transmat is not None:
@@ -256,8 +293,14 @@ class Elba(object):
     ----------
     molecules : dictionary of ElbaMolecule
       the defined molecules
-    beadtypes : dictionary of BeadTypes
+    beadtypes : dictionary of FfType
       the defined beadtypes
+    bondtypes : dictionary of BondType
+      the defined bondtypes
+    angletypes : dictionary of AngleType
+      the defined angletypes
+    dipoletypes : dictionary of FfType
+      the defined dipole restraint types
     units : string
       identifier for the units
     """
@@ -265,6 +308,9 @@ class Elba(object):
     def __init__(self):
         self.molecules = {}
         self.beadtypes = {}
+        self.bondtypes = {}
+        self.angletypes = {}
+        self.dipoletypes = {}
 
     def find_molecule(self, name):
         for mol in self.molecules:
@@ -281,13 +327,15 @@ class Elba(object):
         if "units" in tree.getroot().attrib:
             self.units = tree.getroot().attrib["units"]
 
-        # Parse bead types
+        # Parse bead, bond angle angle types
+        typedict = {"beadtype":FfType,"bondtype":BondType,"angletype":AngleType,"dipoletype":FfType}
+        listdict = {"beadtype":self.beadtypes,"bondtype":self.bondtypes,"angletype":self.angletypes,"dipoletype":self.dipoletypes}
         for child in tree.getroot():
-            if child.tag != "beadtype": continue
-            bt = BeadType()
-            bt.set(**child.attrib)
-            if bt.id > -1:
-                self.beadtypes[bt.id] = bt
+            if child.tag in typedict :
+                t = typedict[child.tag]()
+                t.set(**child.attrib)
+                if t.id > -1:
+                    listdict[child.tag][t.id] = t
 
         # Parse molecules
         for child in tree.getroot():
@@ -303,6 +351,12 @@ def test():
     elbaobj.load('elba.xml')
     for id, bt in elbaobj.beadtypes.iteritems():
         print bt
+    for id, bt in elbaobj.bondtypes.iteritems():
+        print bt
+        print bt.potential(4.0)
+    for id, bt in elbaobj.angletypes.iteritems():
+        print bt
+        print bt.potential(120.0)
 
     for id, mol in elbaobj.molecules.iteritems():
         print mol
@@ -312,17 +366,3 @@ def test():
             print a
         for d in mol.dipolerestraints:
             print d
-
-    names = [line.strip().split()[0].lower() for line in open("popc.xyz", "r").readlines()[2:]]
-    xyz = np.array([line.strip().split()[1:] for line in open("popc.xyz", "r").readlines()[2:]], dtype=float)
-    t = elbaobj.molecules["POPC"].transmat(names).T
-    for i, col in enumerate(t):
-        print "%5s" % names[i],
-        for d in col:
-            print "%.2f" % d,
-        print ""
-    xyz2 = np.dot(t.T, xyz)
-    print xyz2.shape[0]
-    print "0"
-    for bname, c in zip(elbaobj.molecules["POPC"].beadnames, xyz2):
-        print "%s %.3f %.3f %.3f" % (bname, c[0], c[1], c[2])

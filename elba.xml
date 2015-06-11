@@ -75,10 +75,20 @@
       <dipolerest type="5">e2 t1b</dipolerest>
     </connectivity>
   </mol>
-  <beadtype id="2" charge="0.7" radius="5.4" density="1.1"/>
-  <beadtype id="3" charge="-0.7" radius="5.2" density="1.2"/>
-  <beadtype id="4" dipole="0.333" radius="4.6" density="1.2"/>
-  <beadtype id="5" dipole="0.416" radius="4.6" density="1.2"/>
-  <beadtype id="6" radius="4.5" density="0.9"/>
+  <beadtype id="2" charge="0.7" dipole="0.0" radius="5.4" density="1.1"/>
+  <beadtype id="3" charge="-0.7" dipole="0.0" radius="5.2" density="1.2"/>
+  <beadtype id="4" charge="0.0" dipole="0.333" radius="4.6" density="1.2"/>
+  <beadtype id="5" charge="0.0" dipole="0.416" radius="4.6" density="1.2"/>
+  <beadtype id="6" charge="0.0" dipole="0.0" radius="4.5" density="0.9"/>
+  <bondtype id="1" k="1.506" kf="1" r0="4.770"/>
+  <bondtype id="2" k="1.506" kf="1" r0="4.410"/>
+  <bondtype id="3" k="1.506" kf="1" r0="4.140"/>
+  <bondtype id="4" k="1.506" kf="1" r0="4.095"/>
+  <bondtype id="5" k="1.506" kf="1" r0="4.050"/>
+  <angletype id="1" k="3.585" kf="1" theta0="115.0"/>
+  <angletype id="2" k="3.585" kf="1" theta0="90.0"/>
+  <angletype id="3" k="3.585" kf="1" theta0="180.0"/>
+  <angletype id="4" k="3.585" kf="1" theta0="120.0"/>
+  <dipoletype id="5" k="1.195" kf="1" gamm0="0.0"/>
 </elba>
 
