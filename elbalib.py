@@ -44,12 +44,24 @@ class FfType(object):
             setattr(self, prop, float(kwargs[prop]))
 
     def potential(self, coord):
+        """
+        Return the potential given some coordinate
+        Needs to be implemented by sub classes
+        """
         return 0.0
     
     def distribution(self,coord,RT):
+        """
+        Return the distribution of the potential
+        Needs to be implemented by sub classes
+        """
         return 0.0
 
     def statmoments(self,RT):
+        """
+        Return the standard deviation and the mean
+        Needs to be implemented by sub classes
+        """
         return 0.0,0.0
 
 class BondType(FfType):
@@ -77,7 +89,10 @@ class AngleType(FfType):
         return self.k*self.kf*(coscoord - costheta0)*(coscoord - costheta0)
     
     def distribution(self,coord,RT):
-        coscoord = np.cos(np.deg2rad(coord))
+        if coord.min() < -1 or coord.max() > 1.0 :
+            coscoord = np.cos(np.deg2rad(coord))
+        else:
+            coscoord = coord
         mean, std = self.statmoments(RT)
         return stats.norm.pdf(coscoord,loc=mean,scale=std)
 
@@ -156,7 +171,10 @@ class Connectivity(object):
 
     def __str__(self):
         typestr = "%d"%self.type if isinstance(self.type,int) else "("+self.type.__str__()+")"
-        return "Connectivity type=%s, %s"%(typestr,"-".join(b.name if isinstance(b, ElbaBead) else b for b in self.beads))
+        return "Connectivity type=%s, %s"%(typestr,self.atomstring())
+
+    def atomstring(self):
+        return "-".join(b.name if isinstance(b, ElbaBead) else b for b in self.beads)
 
     def parse(self, element, molecule, typelist):
         """
