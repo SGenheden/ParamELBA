@@ -80,11 +80,12 @@ if __name__ == '__main__':
     # Check if we need to translate the atom names
     namtrans = None
     if args.naming is not None:
-        namref = [line.strip() for line in open(args.naming[0],'r').readlines()]
-        nammob = [line.strip() for line in open(args.naming[1],'r').readlines()]
+        namref = [line.strip() for line in open(args.naming[0], 'r').readlines()]
+        nammob = [line.strip() for line in open(args.naming[1], 'r').readlines()]
         namtrans = {}
-        for nr,nm in zip(namref,nammob):
-            if nm != "*" : namtrans[nm] = nr
+        for nr, nm in zip(namref, nammob):
+            if nm != "*":
+                namtrans[nm] = nr
 
     # Pre-processing
     resids = []
@@ -92,12 +93,15 @@ if __name__ == '__main__':
     bond_dict = {}
     ang_dict = {}
     trans_mats = {}
+    ffmols = {}
     for r in refuni.selectAtoms("all").residues:
         ffmol = ff.find_molecule(r.name)
-        if ffmol is None or not (ffmol.bonds and ffmol.angles): continue
+        if ffmol is None or not (ffmol.bonds and ffmol.angles):
+            continue
         resid = "resid %d" % r.id
         resids.append(resid)
         mdresidues.append(universe.selectAtoms(resid))
+        ffmols[resid] = ffmol
 
         # Setup bond and angle selections that are to be tracked
         bond_dict[resid] = [bond.indices(ffmol) for bond in ffmol.bonds]
@@ -111,11 +115,6 @@ if __name__ == '__main__':
                 atomnames = [namtrans[a.name].lower() for a in mdresidues[-1]]
             trans_mats[resid] = ffmol.transmat(atomnames)
 
-    # This assumes that we only have one lipid type, which is fine for now
-    avbond = np.zeros(len(bond_dict[resids[0]]))
-    avang = np.zeros(len(ang_dict[resids[0]]))
-    nr = 1 / float(len(resids))
-
     # Open the output file in a context manager
     with open(args.out, "w") as f:
 
@@ -125,7 +124,8 @@ if __name__ == '__main__':
             if ti * args.dt % 1000 == 0:
                 print "%d" % (ti * args.dt),
                 sys.stdout.flush()
-            if ti * args.dt < args.skip: continue
+            if ti * args.dt < args.skip:
+                continue
 
             # Loop over all residues
             for ri, (resid, mdres) in enumerate(zip(resids, mdresidues)):
@@ -134,23 +134,10 @@ if __name__ == '__main__':
                     xyz = mdres.get_positions()
                 else:
                     xyz = np.dot(trans_mats[resid], mdres.get_positions())
-                # Add up bond length to average
+                # Print out bond and angle values
+                f.write("%d" % (ti * args.dt))
                 for i, bondsel in enumerate(bond_dict[resid]):
-                    if ri == 0:
-                        avbond[i] = _calc_bond(xyz[bondsel, :])
-                    else:
-                        avbond[i] += _calc_bond(xyz[bondsel, :])
-                # Add up valance angle to average
+                    f.write("%8.3f" % _calc_bond(xyz[bondsel, :]))
                 for i, angsel in enumerate(ang_dict[resid]):
-                    if ri == 0:
-                        avang[i] = _calc_angle(xyz[angsel, :])
-                    else:
-                        avang[i] += _calc_angle(xyz[angsel, :])
-
-            # Write out average bond and angles to output file
-            f.write("%d" % (ti * args.dt))
-            for b in avbond:
-                f.write("%8.3f" % (b * nr))
-            for a in avang:
-                f.write("%8.3f" % (a * nr))
-            f.write("\n")
+                    f.write("%8.3f" % _calc_angle(xyz[angsel, :]))
+                f.write("\n")

@@ -45,19 +45,22 @@ class TimeSeries(object):
         self.mean = self.data.mean()
         self.std = self.data.std()
         self.var = self.data.var()
-        self.kde = stats.gaussian_kde(self.data)
-        self.kde.covariance_factor = lambda: 0.25
-        self.kde._compute_covariance()
+#        self.kde = stats.gaussian_kde(self.data)
+#        self.kde.covariance_factor = lambda: 0.25
+#        self.kde._compute_covariance()
         self.histogram, self.edges = np.histogram(self.data, bins=self.len / 40.0)
+        self.points = np.arange(self.mean-3.0*self.std,self.mean+3.5*self.std,0.5*self.std)
 
     def density(self, points=None):
         """
         Return the density of the Kernal density estimator
         """
         if points is None:
-            return self.kde(self.edges)
+#            return self.kde(self.edges)
+            return  stats.norm.pdf(self.points,loc=self.mean,scale=self.std)
         else:
-            return self.kde(points)
+#            return self.kde(points)
+            return  stats.norm.pdf(points,loc=self.mean,scale=self.std)
 
 
 def _fit_ff(serieslist, labels, fflist):
@@ -77,15 +80,15 @@ def _fit_ff(serieslist, labels, fflist):
         fftype = fflist[iseries].type
         isbond = isinstance(fftype, elbalib.BondType)
         if isbond:
-            print "%s | ff: k=%9.3f r_eq=%9.3f" % (fflist[iseries].atomstring(), fftype.k * fftype.kf, fftype.r0),
+            print "%8s | ff: k=%9.3f r_eq=%9.3f" % (fflist[iseries].atomstring(), fftype.k * fftype.kf, fftype.r0),
         else:
-            print "%s | ff: k=%9.3f theta_eq=%9.3f" % (fflist[iseries].atomstring(), fftype.k * fftype.kf, fftype.theta0),
+            print "%12s | ff: k=%9.3f theta_eq=%9.3f" % (fflist[iseries].atomstring(), fftype.k * fftype.kf, fftype.theta0),
         # Now loop over each of the simulated systems and fit to an harmonic system
         for i, (series, label) in enumerate(zip(serieslist, labels)):
             s = series[iseries]
             reffunc = -RT * np.log(s.density())
             p0 = [RT / s.var, s.mean, s.std * np.sqrt(np.pi * 2.0)]
-            popt, pcov = opt.curve_fit(_harmonic, s.edges, reffunc, p0)
+            popt, pcov = opt.curve_fit(_harmonic, s.points, reffunc, p0)
             if isbond:
                 print " %s: k=%9.3f r_eq=%9.3f" % (label, popt[0], popt[1]),
             else:
@@ -110,10 +113,10 @@ def _plot_dists(serieslist, labels, fflist, figure):
         # Plot the density for each simulated system
         for i, (series, label) in enumerate(zip(serieslist, labels)):
             s = series[iseries]
-            a.plot(s.edges, s.density(), color=colors.color(i), label=label)         
+            a.plot(s.points, s.density(), color=colors.color(i), label=label)         
             stdval = max(stdval, np.round(2.0 * s.std, 0), 0.5)
-            minval = min(minval, np.floor(s.edges.min()))
-            maxval = max(maxval, np.ceil(s.edges.max()))
+            minval = min(minval, np.floor(s.points.min()))
+            maxval = max(maxval, np.ceil(s.points.max()))
         # Calculate the range of the x axis
         mean, std = fflist[iseries].type.statmoments(RT)
         minval = min(minval, np.floor(mean - 2.0 * std))
@@ -123,12 +126,13 @@ def _plot_dists(serieslist, labels, fflist, figure):
             maxval = min(1.0,maxval)
         stdval = max(stdval, np.round(2.0 * std, 0), 0.5)
         # Plot the force field ideal distribution
-        x = np.arange(minval, maxval + stdval, stdval)
+        x = np.arange(minval, maxval, 0.1)
         a.plot(x, fflist[iseries].type.distribution(x, RT), color=colors.color(len(labels)), label="ff")  
         # Add legend and ticks
         if iseries == 0:
             a.legend(loc=1, fontsize=8)
         a.set_yticks([])
+        x = np.arange(minval, maxval, stdval)
         a.set_xticks(x)
         if isinstance(fflist[iseries].type, elbalib.AngleType):
             a.set_xticklabels(np.rad2deg(np.arccos(x)))
