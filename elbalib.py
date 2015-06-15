@@ -116,6 +116,8 @@ class ElbaBead(object):
       the identifier of the bead
     beadtype : BeadType
       the type definition
+    idx : integer
+      the index of the bead in the molecule that contains it
     mapping : list of string
       the all-atom mapping of this bead
     """
@@ -123,6 +125,7 @@ class ElbaBead(object):
     def __init__(self):
         self.name = None  # Unassigned
         self.beadtype = None
+        self.idx = -1
         self.mapping = []
 
     def __str__(self):
@@ -273,6 +276,7 @@ class ElbaMolecule(object):
                 b = ElbaBead()
                 b.parse(child, parent)
                 if b.name is not None:
+                    b.idx = len(self.beadnames)
                     self.beadnames.append(b.name)
                     self.beads[b.name] = b
 

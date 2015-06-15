@@ -137,6 +137,7 @@ def _plot_dists(serieslist, labels, fflist, figure):
         if isinstance(fflist[iseries].type, elbalib.AngleType):
             a.set_xticklabels(np.rad2deg(np.arccos(x)))
             a.invert_xaxis()
+        a.text(0.05,0.85,fflist[iseries].atomstring(),fontsize=8,transform=a.transAxes)
     figure.tight_layout()
 
 

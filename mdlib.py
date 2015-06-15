@@ -60,9 +60,9 @@ class TrajectoryProcessor(object):
         self.args = self.argparser.parse_args()
         self.skip = self.args.skip
         self.dt = self.args.dt
-        self._setup_universe()
+        self.setup_universe()
     
-    def _setup_universe(self):
+    def setup_universe(self):
         if self.args.file is None or self.args.struct is None :
             raise Exception("Both a universe and structure file needs to be specified")
         self.universe = md.Universe(self.args.struct, self.args.file)
@@ -188,7 +188,7 @@ class AaCgTrajectoryProcessor(TrajectoryProcessor):
         if self.args.naming is not None:
             namref = [line.strip() for line in open(self.args.naming[0], 'r').readlines()]
             nammob = [line.strip() for line in open(self.args.naming[1], 'r').readlines()]
-            namtrans = {}
+            self.namtrans = {}
             for nr, nm in zip(namref, nammob):
                 if nm != "*":
                     self.namtrans[nm] = nr    
