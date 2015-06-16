@@ -32,6 +32,8 @@ class TrajectoryProcessor(object):
         the parsed arguments
     currtime : float
         the current time in ps when processing the trajectory
+    namtrans : dictionary of strings
+        name translations
     skip : float
         the number of ps to skip
     dt : float
@@ -45,10 +47,12 @@ class TrajectoryProcessor(object):
         self.argparser = argparse.ArgumentParser(description=description)
         self.argparser.add_argument('-f', '--file', nargs="+", help="the trajectory file.")
         self.argparser.add_argument('-s', '--struct', help="a structure file")
+        self.argparser.add_argument('-n', '--naming', nargs=2, help="naming convention change") 
         self.argparser.add_argument('--skip', type=int, help="skip this many snapshots", default=0)
         self.argparser.add_argument('--dt', type=float, help="the number of ps for each snapshot", default=10)
         self.universe = None
-        self.time = 0
+        self.namtrans = None
+        self.currtime = 0
         self.dt = 0
         self.skip = 0
         
@@ -61,6 +65,16 @@ class TrajectoryProcessor(object):
         self.skip = self.args.skip
         self.dt = self.args.dt
         self.setup_universe()
+
+        # Check if we need to translate the atom names
+        self.namtrans = None
+        if self.args.naming is not None:
+            namref = [line.strip() for line in open(self.args.naming[0], 'r').readlines()]
+            nammob = [line.strip() for line in open(self.args.naming[1], 'r').readlines()]
+            self.namtrans = {}
+            for nr, nm in zip(namref, nammob):
+                if nm != "*":
+                    self.namtrans[nm] = nr  
     
     def setup_universe(self):
         if self.args.file is None or self.args.struct is None :
@@ -153,8 +167,6 @@ class AaCgTrajectoryProcessor(TrajectoryProcessor):
         the force field definitions
     iscgtraj : boolean
         if this is CG trajectory
-    namtrans : dictionary of strings
-        AA name translations
     refuniverse : MDAnalysis.Universe
         the reference CG universe
     residues : list of _Residue
@@ -166,10 +178,8 @@ class AaCgTrajectoryProcessor(TrajectoryProcessor):
         super(AaCgTrajectoryProcessor,self).__init__(description)
         self.argparser.add_argument('-r', '--ref', help="a CG reference file", default="ref.pdb")
         self.argparser.add_argument('-x', '--xml', help="an XML file with force field definitions")
-        self.argparser.add_argument('-n', '--naming', nargs=2, help="naming convention change") 
         self.ff = None
         self.refuniverse = None
-        self.namtrans = None
         self.residues = []
         self.iscgtraj = False
         
@@ -181,17 +191,7 @@ class AaCgTrajectoryProcessor(TrajectoryProcessor):
         self.ff.load(self.args.xml)
         
         # Load the reference CG universe
-        self.refuniverse = md.Universe(self.args.ref)
-
-        # Check if we need to translate the atom names
-        self.namtrans = None
-        if self.args.naming is not None:
-            namref = [line.strip() for line in open(self.args.naming[0], 'r').readlines()]
-            nammob = [line.strip() for line in open(self.args.naming[1], 'r').readlines()]
-            self.namtrans = {}
-            for nr, nm in zip(namref, nammob):
-                if nm != "*":
-                    self.namtrans[nm] = nr    
+        self.refuniverse = md.Universe(self.args.ref)  
         
         # Setup of a list of residues defined in the force field that can be processed           
         self.residues = []

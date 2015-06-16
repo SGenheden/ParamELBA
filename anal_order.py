@@ -12,6 +12,15 @@ import numpy as np
 
 import colors
 
+def _expand_selection(selection):
+    """
+    Expand a simple pattern with {A..B} format to an integer range
+    """
+    first = selection.index("{")
+    last  = selection.index("}")
+    start,end = map(int,selection[first+1:last].split(".."))
+    return ["%s%d%s"%(selection[:first],i,selection[last+1:]) for i in range(start,end+1)]
+
 def _plot_order(order_list,labels,figure):
     """
     Plot the distribution of a series in subplots
@@ -25,7 +34,7 @@ def _plot_order(order_list,labels,figure):
         for i,(simorder,label) in enumerate(zip(order_list,labels)):
             order = simorder[ichain].mean(axis=0)
             a.plot(np.arange(1,len(order)+1,1),order,'-*',label=label,color=colors.color(i))
-        a.set_xticks(np.arange(1,len(order)+1,1))
+        a.set_xticks(np.arange(0,len(order)+2,1))
         # Add legend and ticks
         if ichain == 0:
             a.legend(loc=1, fontsize=8)
@@ -65,7 +74,9 @@ if __name__ == '__main__':
     chains_beads = []
     chains_count = []
     for chain in args.chains :
-        chains_beads.append(chain.split("-"))
+        atoms = chain.split("-")
+        if len(atoms) == 1: atoms = _expand_selection(chain)
+        chains_beads.append(atoms)
         chains_count.append(len(chains_beads[-1])-1)
 
     # Read data, assume it was created by md_order.py
