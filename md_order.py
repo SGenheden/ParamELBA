@@ -41,15 +41,13 @@ import mdlib
 def _process_res(residue,processor,**kwargs):
     """
     Called for each residue at every time step of the trajectory
-    Calculates order parameters for each bond vector in each residue
+    Calculates projection with membrane normal for each bond vector in each residue
     """
     for i,chain in enumerate(residue.chains) :
         # Atom2 - Atom1
         vec = residue.xyz[chain[1:],:] - residue.xyz[chain[:-1],:]
-        # Projection with normal
-        proj = np.multiply(vec,kwargs["norm"]).sum(axis=1)**2 / np.sum(vec**2,axis=1)
-        # Order param, these will be printed out by _process_post
-        residue.order[i] = 0.5*(3.0*proj-1)
+        # Projection with normal, these will be average and used by _process_post
+        residue.proj[i] = np.multiply(vec,kwargs["norm"]).sum(axis=1)**2 / np.sum(vec**2,axis=1)
 
 
 def _process_post(processor,**kwargs):
@@ -59,15 +57,15 @@ def _process_post(processor,**kwargs):
     """           
     f = kwargs["fileobj"] 
     f.write("%d"%processor.currtime)
-    # Calculates molecular-averaged order parameters
-    avorder = [np.zeros(o.shape[0]) for o in processor.residues[0].order]
+    # Sums up molecular projections
+    sumproj = [np.zeros(p.shape[0]) for p in processor.residues[0].proj]
     for residue in processor.residues :
-        for ichain,rorder in enumerate(residue.order) :
-            avorder[ichain] += rorder
-    # Print out the average to the output file
+        for ichain,rproj in enumerate(residue.proj) :
+            sumproj[ichain] += rproj
+    # Calculate and print out the order parameter to the output file
     one_over_n = 1 / float(len(processor.residues))
-    for i, o in enumerate(avorder):
-        omolav = o * one_over_n
+    for i, p in enumerate(sumproj):
+        omolav = 0.5*(3.0* p * one_over_n - 1.0)
         f.write(" %s" % " ".join("%.3f"%oo for oo in omolav))
     f.write("\n")
 
@@ -85,11 +83,11 @@ if __name__ == '__main__':
     # Add bead indices for each chain to track
     for res in processor.residues :
         res.chains = []
-        res.order = []
+        res.proj = []
         for chain in processor.args.chains :
             indices = np.array([res.ffmol.beads[b].idx for b in chain.split("-")],dtype=int)
             res.chains.append(indices)
-            res.order.append(np.zeros(indices.shape[0]-1))
+            res.proj.append(np.zeros(indices.shape[0]-1))
 
     # Assumes that the normal is along the z-axis
     bilayer_norm = np.array([0.0,0.0,1.0])
