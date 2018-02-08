@@ -1,0 +1,73 @@
+<elba units="lammps">
+  <mol resname="POPC" mappingff="charmm">
+    <beads n="3">
+      <bead name="NC3" type="2">
+        <mapping>n</mapping>
+      </bead>
+      <bead name="PO4" type="3">
+        <mapping>p</mapping>
+      </bead>
+      <bead name="GL1" type="5">
+        <mapping>c1 c2 o21 o22</mapping>
+      </bead>
+      <bead name="GL2" type="5">
+        <mapping>c2 c3 o31 o32</mapping>
+      </bead>
+      <bead name="C1A" type="6">
+        <mapping>c31 c32 c33 c34</mapping>
+      </bead>
+      <bead name="C2A" type="6">
+        <mapping>c35 c36 c37 c38</mapping>
+      </bead>
+      <bead name="C3A" type="6">
+        <mapping>c39 c310 c311 c312</mapping>
+      </bead>
+      <bead name="C4A" type="6">
+        <mapping>c313 c314 c315 c316</mapping>
+      </bead>
+      <bead name="C1B" type="6">
+        <mapping>c21 c22 c23 c24</mapping>
+      </bead>
+      <bead name="C2B" type="6">
+        <mapping>c24 c25 c26 c27</mapping>
+      </bead>
+      <bead name="D3B" type="6">
+        <mapping>c28 c29 c210 c211</mapping>
+      </bead>
+      <bead name="C4B" type="6">
+        <mapping>c212 c213 c214 c215</mapping>
+      </bead>
+      <bead name="C5B" type="6">
+        <mapping>c216 c217 c218</mapping>
+      </bead>
+    </beads>
+    <connectivity bonds="12" angles="9" dipolerests="0">
+      <bond type="1">NC3 PO4</bond>
+      <bond type="1">PO4 GL1</bond>
+      <bond type="2">GL1 GL2</bond>
+      <bond type="1">GL2 C1A</bond>
+      <bond type="1">C1A C2A</bond>
+      <bond type="1">C2A C3A</bond>
+      <bond type="1">C3A C4A</bond>
+      <bond type="1">GL1 C1B</bond>
+      <bond type="1">C1B C2B</bond>
+      <bond type="1">C2B D3B</bond>
+      <bond type="1">D3B C4B</bond>
+      <bond type="1">C4B C5B</bond>
+      <angle type="1">PO4 GL1 GL2</angle>
+      <angle type="2">PO4 GL1 C1B</angle>
+      <angle type="2">GL2 C1A C2A</angle>
+      <angle type="2">C1A C2A C3A</angle>
+      <angle type="2">C2A C3A C4A</angle>
+      <angle type="2">GL1 C1B C2B</angle>
+      <angle type="2">C1B C2B D3B</angle>
+      <angle type="3">C2B D3B C4B</angle>
+      <angle type="2">D3B C4B C5B</angle>
+    </connectivity>
+  </mol>
+  <bondtype id="1" k="2.99" kf="0.5" r0="4.700"/>
+  <bondtype id="2" k="2.99" kf="0.5" r0="3.700"/>
+  <angletype id="1" k="5.975" kf="0.5" theta0="120.0"/>
+  <angletype id="2" k="5.975" kf="0.5" theta0="180.0"/>
+  <angletype id="3" k="10.75" kf="0.5" theta0="120.0"/>
+</elba>

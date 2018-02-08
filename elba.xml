@@ -1,11 +1,20 @@
 <elba units="lammps">
+  <mol resname="SOL" mappingff="charmm">
+    <beads n="1">
+      <bead name="w" type="1">
+        <mapping>oh2</mapping>
+      </bead>
+    </beads>
+  </mol>
   <mol resname="POPC" mappingff="charmm">
     <beads n="14">
       <bead name="n" type="2">
         <mapping>n</mapping>
+        <chargegroup>n c12 c13 c14 c15</chargegroup>
       </bead>  
       <bead name="p" type="3">
         <mapping>p</mapping>
+        <chargegroup>p o11 o12 o13 o14 c11 c1</chargegroup>
       </bead>
       <bead name="g" type="4">
         <mapping>o11 c1 c2 c3 o21 o31</mapping>
@@ -75,11 +84,12 @@
       <dipolerest type="5">e2 t1b</dipolerest>
     </connectivity>
   </mol>
-  <beadtype id="2" charge="0.7" dipole="0.0" radius="5.4" density="1.1"/>
-  <beadtype id="3" charge="-0.7" dipole="0.0" radius="5.2" density="1.2"/>
-  <beadtype id="4" charge="0.0" dipole="0.333" radius="4.6" density="1.2"/>
-  <beadtype id="5" charge="0.0" dipole="0.416" radius="4.6" density="1.2"/>
-  <beadtype id="6" charge="0.0" dipole="0.0" radius="4.5" density="0.9"/>
+  <beadtype id="1" charge="0.0" dipole="0.541" radius="3.0" density="2.7" epsilon="0.550" sigma="3.050"/>
+  <beadtype id="2" charge="0.7" dipole="0.0" radius="5.4" density="1.1" epsilon="1.434" sigma="5.400"/>
+  <beadtype id="3" charge="-0.7" dipole="0.0" radius="5.2" density="1.2" epsilon="1.434" sigma="5.200"/>
+  <beadtype id="4" charge="0.0" dipole="0.333" radius="4.6" density="1.2" epsilon="0.956" sigma="4.600"/>
+  <beadtype id="5" charge="0.0" dipole="0.416" radius="4.6" density="1.2" epsilon="0.956" sigma="4.600"/>
+  <beadtype id="6" charge="0.0" dipole="0.0" radius="4.5" density="0.9" epsilon="0.837" sigma="4.500"/>
   <bondtype id="1" k="1.506" kf="1" r0="4.770"/>
   <bondtype id="2" k="1.506" kf="1" r0="4.410"/>
   <bondtype id="3" k="1.506" kf="1" r0="4.140"/>
@@ -89,6 +99,6 @@
   <angletype id="2" k="3.585" kf="1" theta0="90.0"/>
   <angletype id="3" k="3.585" kf="1" theta0="180.0"/>
   <angletype id="4" k="3.585" kf="1" theta0="120.0"/>
-  <dipoletype id="5" k="1.195" kf="1" gamm0="0.0"/>
+  <dipoletype id="5" k="1.195" kf="1" gamma0="0.0"/>
 </elba>
 

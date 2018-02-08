@@ -20,7 +20,7 @@ class FfType(object):
     ----------
     id : integer
       the identifier of the type
-    props : dictionary of floats
+    props : dictionary of floats or strings
       the properties of this type
     """
 
@@ -29,7 +29,7 @@ class FfType(object):
         self.props = {}
 
     def __str__(self):
-        return "Type %d %s" % (self.id, " ".join("%s=%.3f" % (prop, val) for prop, val in self.props.iteritems()))
+        return "Type %d %s" % (self.id, " ".join("%s=%.3f" % (prop, val) if isinstance(val,float) else "%s=%s"% (prop, val) for prop, val in self.props.iteritems()))
 
     def set(self, **kwargs):
         """
@@ -42,8 +42,12 @@ class FfType(object):
         for prop in kwargs:
             if prop == "id":
                 continue  # Already took care of id above
-            self.props[prop] = float(kwargs[prop])
-            setattr(self, prop, float(kwargs[prop]))
+            try:
+                self.props[prop] = float(kwargs[prop])
+            except:
+                self.props[prop] = kwargs[prop]
+            finally:
+                setattr(self, prop, self.props[prop])
 
     def potential(self, coord):
         """
@@ -52,7 +56,7 @@ class FfType(object):
         """
         return 0.0
 
-    def distribution(self, coord, RT):
+    def distribution(self, coord, RT,**kwargs):
         """
         Return the distribution of the potential
         Needs to be implemented by sub classes
@@ -75,7 +79,7 @@ class BondType(FfType):
     def potential(self, coord):
         return self.k * self.kf * (coord - self.r0) * (coord - self.r0)
 
-    def distribution(self, coord, RT):
+    def distribution(self, coord, RT,**kwargs):
         mean, std = self.statmoments(RT)
         return stats.norm.pdf(coord, loc=mean, scale=std)
 
@@ -93,8 +97,12 @@ class AngleType(FfType):
         coscoord = np.cos(np.deg2rad(coord))
         return self.k * self.kf * (coscoord - costheta0) * (coscoord - costheta0)
 
-    def distribution(self, coord, RT):
-        if coord.min() < -1 or coord.max() > 1.0:
+    def distribution(self, coord, RT,**kwargs):
+        trans = True
+        if "trans"  in kwargs :
+            trans = kwargs["trans"]
+
+        if trans and (coord.min() < -1 or coord.max() > 1.0):
             coscoord = np.cos(np.deg2rad(coord))
         else:
             coscoord = coord
@@ -120,6 +128,8 @@ class ElbaBead(object):
       the index of the bead in the molecule that contains it
     mapping : list of string
       the all-atom mapping of this bead
+    chargegroup : list of string
+      the all-atom mapping of this bead used in charge grouping
     """
 
     def __init__(self):
@@ -127,6 +137,7 @@ class ElbaBead(object):
         self.beadtype = None
         self.idx = -1
         self.mapping = []
+        self.chargegroup = []
 
     def __str__(self):
         if self.name is not None:
@@ -160,7 +171,23 @@ class ElbaBead(object):
                 self.beadtype = t
         for m in element.findall("./mapping"):
             self.mapping.extend(m.text.strip().split())
+        for m in element.findall("./chargegroup"):
+            self.chargegroup.extend(m.text.strip().split())
+        if len(self.chargegroup) == 0 and len(self.mapping) > 0 :
+            self.chargegroup.extend(self.mapping)
 
+    def generate_input(self, aidx, midx, xyz):
+        # Generate new dipole in random direction
+        if self.beadtype.dipole > 0.000001 :
+            muz = np.random.uniform(low=-self.beadtype.dipole,high=self.beadtype.dipole)
+            phi = np.random.uniform(low=0,high=2.0*np.pi)
+            theta = np.arcsin(muz/self.beadtype.dipole)
+            mux=self.beadtype.dipole*np.cos(theta)*np.cos(phi)
+            muy=self.beadtype.dipole*np.cos(theta)*np.sin(phi)
+        else :
+            mux,muy,muz = (0.0,0.0,0.0)
+
+        return "%6d %2d %12.5f %12.5f %12.5f %4d %8.5f %12.5f %12.5f %12.5f %12.5f %12.5f"%(aidx,self.beadtype.id,xyz[0],xyz[1],xyz[2],midx,self.beadtype.charge,mux,muy,muz,self.beadtype.radius,self.beadtype.density)
 
 class Connectivity(object):
     """
@@ -199,9 +226,9 @@ class Connectivity(object):
           the list of types for this connectivity
         """
         if "type" in element.attrib:
-            self.type = int(element.attrib["type"])
-            if self.type in typelist:
-                self.type = typelist[self.type]
+            self.contype = int(element.attrib["type"])
+            if self.contype in typelist:
+                self.contype = typelist[self.contype]
             for atom in element.text.strip().split():
                 if atom in molecule.beadnames:
                     self.beads.append(molecule.beads[atom])
@@ -404,6 +431,17 @@ class Elba(object):
             if mol.resname is not None:
                 self.molecules[mol.resname] = mol
 
+def ljconvert(**kwargs):
+
+    if "epsilon" in kwargs and "sigma" in kwargs:
+        sigma6 = np.power(kwargs["sigma"],6)
+        c6 = 4.0*kwargs["epsilon"]*sigma6
+        c12 = 4.0*kwargs["epsilon"]*sigma6*sigma6
+        return c12,c6
+    elif "c6" in kwargs and "c12" in kwargs:
+        epsilon = kwargs["c6"]*kwargs["c6"] / (4*kwargs["c12"])
+        sigma = np.power(kwargs["c12"] / kwargs["c6"], 1.0 / 6.0)
+        return epsilon,sigma
 
 def test(filename):
     elbaobj = Elba()
@@ -425,6 +463,8 @@ def test(filename):
             print a
         for d in mol.dipolerestraints:
             print d
+        for bn in mol.beadnames :
+            print mol.beads[bn].generate_input(0,1,[0,0,0])
 
     print elbaobj.molecules["POPC"].write_cgtools_input()
 

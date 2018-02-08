@@ -33,45 +33,59 @@ import numpy as np
 
 import mdlib
 
-def _calc_bond(xyz):
-    return mdutil.norm(xyz[0, :] - xyz[1, :])
-
-
-def _calc_angle(xyz):
-    a = xyz[0, :] - xyz[1, :]
-    b = xyz[2, :] - xyz[1, :]
-    return np.rad2deg(np.arccos(np.dot(a, b) / (mdutil.norm(a) * mdutil.norm(b))))
-
-
-def _process_res(residue,processor,**kwargs) :
+class BondAngAnalysis(mdlib.AaCgAction):
     """
-    Called for each residue at every time step of the trajectory
-    Print out the bond and angles to the output file
-    """
-    f = kwargs["fileobj"]
-    f.write("%d"%processor.currtime)
-    for i, bondsel in enumerate(residue.bonds):
-        f.write("%8.3f" % _calc_bond(residue.xyz[bondsel, :]))
-    for i, angsel in enumerate(residue.angles):
-        f.write("%8.3f" % _calc_angle(residue.xyz[angsel, :]))
-    f.write("\n")
+    Class to analyse bond and angles during a trajectory
 
+    Attributes:
+    -----------
+    f : FileObject
+        the output file
+    """
+    def add_arguments(self, parser):
+        parser.add_argument('-o', '--out', help="the output", default="bondang.txt")
+
+    def setup(self, args):
+        self.out = args.out
+        self.f = open(self.out, "w")
+
+    def setup_residues(self):
+        for res in self.processor.residues :
+            res.bonds = [bond.indices(res.ffmol) for bond in res.ffmol.bonds]
+            res.angles = [angle.indices(res.ffmol) for angle in res.ffmol.angles]
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        try:
+            self.f.close()
+        except:
+            pass
+        return False
+
+    def resprocess(self, residue):
+        """
+        Calculates all bond and angle values and print them to disc
+        """
+        self.f.write("%d"%self.processor.currtime)
+        for i, bondsel in enumerate(residue.bonds):
+            self.f.write("%8.3f" % self._calc_bond(residue.xyz[bondsel, :]))
+        for i, angsel in enumerate(residue.angles):
+            self.f.write("%8.3f" % self._calc_angle(residue.xyz[angsel, :]))
+        self.f.write("\n")
+
+    def _calc_bond(self,xyz):
+        return mdutil.norm(xyz[0, :] - xyz[1, :])
+
+    def _calc_angle(self,xyz):
+        a = xyz[0, :] - xyz[1, :]
+        b = xyz[2, :] - xyz[1, :]
+        return np.rad2deg(np.arccos(np.dot(a, b) / (mdutil.norm(a) * mdutil.norm(b))))
 
 if __name__ == '__main__':
 
-    print " ".join(sys.argv)
-
-    # Setup the trajectory processor
     processor = mdlib.AaCgTrajectoryProcessor("Track CG bond and angle distributions through an MD trajectory")
-    processor.argparser.add_argument('-o', '--out', help="the output", default="bondang.txt")
-    
-    processor.setup()
-    # Add bond and angle indices to each of the defined residues
-    for res in processor.residues :
-        res.bonds = [bond.indices(res.ffmol) for bond in res.ffmol.bonds]
-        res.angles = [angle.indices(res.ffmol) for angle in res.ffmol.angles]
-
-    # Open the output file in a context manager and then process the trajectory
-    with open(processor.args.out, "w") as f:
-        processor.process(None,residuefunc=_process_res,fileobj=f)
-                
+    with BondAngAnalysis(processor) as analysis:
+        processor.setup(printargs=True)
+        processor.process()
